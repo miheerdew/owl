@@ -67,8 +67,8 @@ def gaussian_corruption_comparison(X_:np.ndarray, mu_:np.ndarray, cov_:np.ndarra
     weights["OWL (TV)"] = prob
 
     ## OWL - Kernelized TV
-    best_ll = -np.infty
-    hell_dist_sel = None
+    #best_ll = -np.infty
+    best_tvd = np.infty 
     mu_dist_sel = None
     for k in [5, 10, 25, 50]:
         g = Gaussian(X=X)
@@ -77,9 +77,14 @@ def gaussian_corruption_comparison(X_:np.ndarray, mu_:np.ndarray, cov_:np.ndarra
         kde = RBFKDE(X, bandwidth)
         g.fit_owl(ball=tv_ball, n_iters=10, kde=kde)
         prob = g.w/np.sum(g.w)
-        ll = np.dot(prob, g.log_likelihood()) - np.nansum(xlogy(prob , prob))
-        mu_dist = np.mean(np.square(mu - g.mu ))
 
+        #Estimate the TV distance between the estimated model and the data
+        #ll = np.dot(prob, g.log_likelihood()) - np.nansum(xlogy(prob , prob))
+        model_log_likelihood = g.log_likelihood()
+        kde_log_likelihood = kde.log_likelihood()
+        tv_distance = 0.5*np.mean(np.abs(np.exp(model_log_likelihood - kde_log_likelihood)-1))
+
+        mu_dist = np.mean(np.square(mu - g.mu ))
         
         results.append({"Method": "OWL (Kernelized, k=" + str(k) + ")", 
                         "Corruption fraction": epsilon, 
@@ -88,8 +93,8 @@ def gaussian_corruption_comparison(X_:np.ndarray, mu_:np.ndarray, cov_:np.ndarra
         
         weights["OWL (Kernelized, k=" + str(k) + ")"] = prob
 
-        if ll > best_ll:
-            best_ll = ll
+        if tv_distance > best_tvd:
+            best_tvd = tv_distance
             mu_dist_sel = mu_dist
 
     results.append({"Method": "OWL (Kernelized, adaptive)", 
